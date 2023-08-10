@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const Notes = require('../models/Note');
 var fetchuser = require('../middleware/fetchUser');
-const JWT_SECRET = process.env.JWT_SECRET;
 const { body, validationResult } = require('express-validator');
 
 
@@ -41,6 +40,23 @@ router.get('/allnotes', fetchuser, async (req, res) => {
 
 })
 
+// To get specific note
+router.get('/getnote/:id', fetchuser, async (req, res) => {
+    try {
+        let note = await Notes.findById(req.params.id);
+        if (!note) return res.status(404).send("Not Found")
+
+        if (note.user.toString() !== req.user.id)
+            return res.status(401).send("Not allowed")
+
+        res.json(note);
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send("Internal server error");
+    }
+
+})
+
 // Update Note
 router.put('/updatenote/:id', fetchuser, [
     body('title', 'Enter title').isLength({ min: 3 }), //express validator used for cleaning inputs before saving in db
@@ -66,6 +82,7 @@ router.put('/updatenote/:id', fetchuser, [
 
         note = await Notes.findByIdAndUpdate(req.params.id, { $set: newNote }, { new: true })
         res.json(note);
+        
     } catch (error) {
         console.log(error.message);
         res.status(500).send("Internal server error");
